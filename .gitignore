@@ -1,0 +1,13 @@
+# Ignore compiled output
+/build/
+/dist/
+
+# Ignore node modules
+node_modules/
+
+# Ignore temporary files
+*.tmp
+*.log
+
+# Ignore sensitive information
+.env
