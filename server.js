@@ -1,5 +1,5 @@
 const WebSocket = require('ws');
-const processData = require('./processData');
+const discover = require('./discover');
 // Create WebSocket server on port 3000
 const wss = new WebSocket.Server({ port: 3000 });
 
@@ -15,11 +15,11 @@ wss.on('connection', ws =>
     ws.send('ACK');
     if (message == 'getAllDevices') 
     {
-      processData(ws);
+      discover(ws);
     }
-    else if (message == 'changeConfig') 
+    else if (message == 'wink') 
     {
-      console.log(data.config.symbology);
+      wink(ws);
     }
   });
 });

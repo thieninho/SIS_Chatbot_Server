@@ -31,8 +31,10 @@ async function getAllDevices(ipAddress)
   {
     console.log(`Device found at ${response.addr.address}:${response.addr.port} with response: ${response.response}`);
     var device = {};
-    device.Address = response.addr.address;
-    device.Family = getDeviceFamily(response.response);
+    device.address = response.addr.address;
+    device.family = getDeviceFamily(response.response);
+    device.mac = getMAC(response.response);
+    device.serial = getDeviceSerial(response.response);
     allFoundDevices.push(device);
   }
   return allFoundDevices;
@@ -40,11 +42,22 @@ async function getAllDevices(ipAddress)
 
 function getDeviceFamily(response) 
 {
-  // Example response string
-  // '...;DeviceFamily=M220X;...'
   const match = response.match(/DeviceFamily=([^;]*)/);
   return match ? match[1] : null;
 }
+
+function getMAC(response) 
+{
+    const match = response.match(/MAC=([^;]*)/);
+    return match ? match[1] : null;
+}
+
+function getDeviceSerial(response) 
+{
+    const match = response.match(/DeviceSerial=([^;]*)/);
+    return match ? match[1] : null;
+}
+
 
 module.exports.getIPv4Addresses = getIPv4Addresses;
 module.exports.getAllDevices = getAllDevices;
