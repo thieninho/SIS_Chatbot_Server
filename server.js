@@ -13,7 +13,7 @@ wss.on('connection', ws =>
     var data = JSON.parse(data);
     var message = data.message;
     ws.send('ACK');
-    if (message == 'getAllDevices') 
+    if (message == 'discover') 
     {
       discover(ws);
     }
@@ -24,4 +24,4 @@ wss.on('connection', ws =>
   });
 });
 
-console.log('WebSocket server is running on ws://localhost:3000');
+console.log('WebSocket server is running on ws://10.84.30.91:3000');

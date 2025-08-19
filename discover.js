@@ -1,30 +1,23 @@
 const getIPv4Addresses = require('./network.js').getIPv4Addresses;
 const getAllDevices = require('./network.js').getAllDevices;
-function processData(ws) 
+function discover(ws) 
 {
-  var allIPAddresses = getIPv4Addresses();
-  if(allIPAddresses.length > 0) 
+  const allIPAddresses = getIPv4Addresses();
+  if (allIPAddresses.length > 0) 
   {
-    for (const ipAddress of allIPAddresses)
-    {
+    const devicePromises = allIPAddresses.map(ipAddress =>
       getAllDevices(ipAddress)
-        .then(devices => 
-        {
-          if (devices.length > 0) 
-          {
-            ws.send(JSON.stringify({devices: devices }));
-          } 
-          else 
-          {
-            // ws.send(JSON.stringify({ type: 'noDevices', ipAddress: ipAddress }));
-          }
-        })
-        .catch(err => 
-        {
-          console.error(`Error getting devices for ${ipAddress}:`, err);
-          ws.send(JSON.stringify({ type: 'error', message: `Error getting devices for ${ipAddress}` }));
-        });
-    }
+        .then(devices => ({ ipAddress, devices }))
+        .catch(err => ({ ipAddress, error: err.message }))
+    );
+
+    Promise.all(devicePromises)
+      .then(results => {
+        ws.send(JSON.stringify({ results }));
+      })
+      .catch(err => {
+        ws.send(JSON.stringify({ type: 'error', message: 'Error processing devices', error: err.message }));
+      });
   }
   else 
   {
@@ -32,4 +25,4 @@ function processData(ws)
   }
 }
 
-module.exports = processData;
+module.exports = discover;
