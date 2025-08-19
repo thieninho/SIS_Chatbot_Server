@@ -1,11 +1,11 @@
 const dgram = require('dgram');
 
-function sendUdpBroadcastAndListen(sourceIp, options = {}) 
+function sendUdpBroadcastAndListen(sourceIp, payload_string, options = {}) 
 {
   const DEST_IP = options.destIp || '255.255.255.255';
   const SOURCE_PORT = options.sourcePort || 4089;
   const DEST_PORT = options.destPort || 4088;
-  const PAYLOAD = options.payload || 'DLA_DISCOVERY;v1.0;FIND_REQ;AnswerPort=4089;Version=2.0';
+  const PAYLOAD = options.payload || payload_string;
   const LISTEN_TIMEOUT = options.listenTimeout || 5000; // ms
   const MAX_RESPONSES = options.maxResponses || 10;
 

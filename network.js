@@ -21,7 +21,8 @@ function getIPv4Addresses()
 async function getAllDevices(ipAddress)
 {
   var allFoundDevices = [];
-  const responses = await sendUdpBroadcastAndListen(ipAddress);
+  const payload_string = 'DLA_DISCOVERY;v1.0;FIND_REQ;AnswerPort=4089;Version=2.0';
+  const responses = await sendUdpBroadcastAndListen(ipAddress, payload_string);
   if (responses.length === 0) 
   {
     console.warn('No devices found');
