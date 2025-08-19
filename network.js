@@ -36,6 +36,7 @@ async function getAllDevices(ipAddress)
     device.family = getDeviceFamily(response.response);
     device.mac = getMAC(response.response);
     device.serial = getDeviceSerial(response.response);
+    device.netAddress = getDeviceNetAddress(response.response);
     allFoundDevices.push(device);
   }
   return allFoundDevices;
@@ -59,6 +60,11 @@ function getDeviceSerial(response)
     return match ? match[1] : null;
 }
 
+function getDeviceNetAddress(response) 
+{
+    const match = response.match(/NetAddress=([^;]*)/);
+    return match ? match[1] : null;
+}
 
 module.exports.getIPv4Addresses = getIPv4Addresses;
 module.exports.getAllDevices = getAllDevices;
