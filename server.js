@@ -2,7 +2,7 @@ const WebSocket = require('ws');
 const discover = require('./functions/discover');
 const wink = require('./functions/wink');
 const changeIP = require('./functions/changeIP');
-const { connectXpress, disconnectXpress, xpressFunction } = require('./functions/xpress');
+const { openHMP, closeHMP, xpressFunction, changeConfigHMP } = require('./functions/HMP.js');
 const wss = new WebSocket.Server({ port: 3000 });
 wss.on('connection', ws => 
 {
@@ -30,7 +30,7 @@ wss.on('connection', ws =>
       if (ws.discoveredData) 
       {
         console.log('Winking device with serial:', data);
-        const response = await wink(ws, ws.discoveredData, data);
+        const response = await wink(ws.discoveredData, data);
         console.log('Wink response:', response);
         if (response) 
         {
@@ -50,7 +50,7 @@ wss.on('connection', ws =>
     {
       if(ws.discoveredData)
       {
-        await changeIP(ws, ws.discoveredData, data);
+        await changeIP(ws.discoveredData, data);
         try 
         {
           const discoveredData = await discover();
@@ -69,32 +69,25 @@ wss.on('connection', ws =>
     }
     else if(message == 'changeConfig')
     {
-      if(ws.discoveredData)
-      {
-
-      }
-      else
-      {
-        ws.send(JSON.stringify({ type: 'error', message: 'No discovered data available. Run discover first.', errorCode: 1 }));
-      }
+      
     }
-    else if(message == 'xpressOpen')
+    else if(message == 'openHMP')
     {
-      const response = await connectXpress();
-      if(response.message == '\x1BH\r\n\x1BS\r\n')
+      const response = await openHMP(data);
+      console.log('HMP open response:', response);
+      if(response.message == '\x1BH\r\n\x1BS\r\n' || response.message == '\x1BH\r\n')
       {
         ws.client = response.client;
-        ws.send(JSON.stringify({ type: 'xpressOpen', message: 'Xpress connection opened.', errorCode: 0 }));
+        ws.send(JSON.stringify({ type: 'hmpOpen', message: 'HMP connection opened.', errorCode: 0 }));
       }
       else
       {
-        ws.send(JSON.stringify({ type: 'xpressOpen', message: 'Failed to open Xpress connection.', errorCode: 1 }));
+        ws.send(JSON.stringify({ type: 'hmpOpen', message: 'Failed to open HMP connection.', errorCode: 1 }));
       }
     }
     else if(message == 'xpressFunction')
     {
       const response = await xpressFunction(ws.client, data.function);
-      console.log('Xpress function response:', response);
       if(response.message == 'ACK\n')
       {
         ws.send(JSON.stringify({ type: 'xpressFunction', message: 'Xpress function executed.', errorCode: 0 }));
@@ -104,16 +97,29 @@ wss.on('connection', ws =>
         ws.send(JSON.stringify({ type: 'xpressFunction', message: 'Failed to execute Xpress function.', errorCode: 1 }));
       }
     }
-    else if(message == 'xpressClose')
+    else if(message == 'changeDefaultConfig')
     {
-      const response = await disconnectXpress(ws.client);
+      const response = await changeConfigHMP(ws.client, "Default");
+      console.log('Change default config response:', response);
       if(response.message == 'ACK\n')
       {
-        ws.send(JSON.stringify({ type: 'xpressClose', message: 'Xpress connection closed. ', errorCode: 0 }));
+        ws.send(JSON.stringify({ type: 'changeDefaultConfig', message: 'Change default config executed.', errorCode: 0 }));
       }
       else
       {
-        ws.send(JSON.stringify({ type: 'xpressClose', message: 'Failed to close Xpress connection.', errorCode: 1 }));
+        ws.send(JSON.stringify({ type: 'changeDefaultConfig', message: 'Failed to execute change default config.', errorCode: 1 }));
+      }
+    }
+    else if(message == 'closeHMP')
+    {
+      const response = await closeHMP(ws.client);
+      if(response.message == 'ACK\n')
+      {
+        ws.send(JSON.stringify({ type: 'hmpClose', message: 'HMP connection closed. ', errorCode: 0 }));
+      }
+      else
+      {
+        ws.send(JSON.stringify({ type: 'hmpClose', message: 'Failed to close HMP connection.', errorCode: 1 }));
       }
     }
   });

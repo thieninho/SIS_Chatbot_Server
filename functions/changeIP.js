@@ -1,7 +1,7 @@
 const sendUdpBroadcastAndListen = require('../sendUdpBroadcastAndListen.js').sendUdpBroadcastAndListen;
 const findDeviceByIP = require('../lib/basic.js').findDeviceByIP;
 const findDeviceBySerial = require('../lib/basic.js').findDeviceBySerial;
-async function changeIP(ws,foundDevices, dataFromMessage) 
+async function changeIP(foundDevices, dataFromMessage) 
 {
     var foundDevice = "";
     if(dataFromMessage.serial != undefined)

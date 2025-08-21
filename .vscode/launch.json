@@ -13,6 +13,7 @@
                 "<node_internals>/**"
             ],
             "program": "${workspaceFolder}\\server.js"
+            // "program": "${workspaceFolder}\\functions\\changeConfig.js"
         }
     ]
 }

@@ -2,7 +2,7 @@ const sendUdpBroadcastAndListen = require('../sendUdpBroadcastAndListen.js').sen
 const findDeviceByIP = require('../lib/basic.js').findDeviceByIP;
 const findDeviceBySerial = require('../lib/basic.js').findDeviceBySerial;
 
-function wink(ws, foundDevices, dataFromMessage) {
+function wink(foundDevices, dataFromMessage) {
     return new Promise((resolve, reject) => {
         let foundDevice = "";
         if (dataFromMessage.serial !== undefined) 
