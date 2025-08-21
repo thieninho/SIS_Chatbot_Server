@@ -19,7 +19,7 @@ wss.on('connection', ws =>
       try 
       {
         const discoveredData = await discover();
-        ws.send(JSON.stringify({ type: 'discover', results: discoveredData, errorCode: 0 }));
+        ws.send(JSON.stringify({ type: 'success', results: discoveredData, errorCode: 0 }));
         ws.discoveredData = discoveredData;
       } catch (err) {
         ws.send(JSON.stringify({ type: 'error', message: err.message, errorCode: 1 }));
@@ -34,7 +34,7 @@ wss.on('connection', ws =>
         console.log('Wink response:', response);
         if (response) 
         {
-          ws.send(JSON.stringify({ type: 'wink', message: 'Wink command sent successfully.', errorCode: 0 }));
+          ws.send(JSON.stringify({ type: 'success', message: 'Wink command sent successfully.', errorCode: 0 }));
         } 
         else 
         {
@@ -54,7 +54,7 @@ wss.on('connection', ws =>
         try 
         {
           const discoveredData = await discover();
-          ws.send(JSON.stringify({ type: 'discover', results: discoveredData, errorCode: 0 }));
+          ws.send(JSON.stringify({ type: 'success', results: discoveredData, errorCode: 0 }));
           ws.discoveredData = discovseredData;
         } 
         catch (err) 
@@ -78,11 +78,11 @@ wss.on('connection', ws =>
       if(response.message == '\x1BH\r\n\x1BS\r\n' || response.message == '\x1BH\r\n')
       {
         ws.client = response.client;
-        ws.send(JSON.stringify({ type: 'hmpOpen', message: 'HMP connection opened.', errorCode: 0 }));
+        ws.send(JSON.stringify({ type: 'success', message: 'HMP connection opened.', errorCode: 0 }));
       }
       else
       {
-        ws.send(JSON.stringify({ type: 'hmpOpen', message: 'Failed to open HMP connection.', errorCode: 1 }));
+        ws.send(JSON.stringify({ type: 'error', message: 'Failed to open HMP connection.', errorCode: 1 }));
       }
     }
     else if(message == 'xpressFunction')
@@ -90,11 +90,11 @@ wss.on('connection', ws =>
       const response = await xpressFunction(ws.client, data.function);
       if(response.message == 'ACK\n')
       {
-        ws.send(JSON.stringify({ type: 'xpressFunction', message: 'Xpress function executed.', errorCode: 0 }));
+        ws.send(JSON.stringify({ type: 'success', message: 'Xpress function executed.', errorCode: 0 }));
       }
       else
       {
-        ws.send(JSON.stringify({ type: 'xpressFunction', message: 'Failed to execute Xpress function.', errorCode: 1 }));
+        ws.send(JSON.stringify({ type: 'error', message: 'Failed to execute Xpress function.', errorCode: 1 }));
       }
     }
     else if(message == 'changeDefaultConfig')
@@ -103,11 +103,11 @@ wss.on('connection', ws =>
       console.log('Change default config response:', response);
       if(response.message == 'ACK\n')
       {
-        ws.send(JSON.stringify({ type: 'changeDefaultConfig', message: 'Change default config executed.', errorCode: 0 }));
+        ws.send(JSON.stringify({ type: 'success', message: 'Change default config executed.', errorCode: 0 }));
       }
       else
       {
-        ws.send(JSON.stringify({ type: 'changeDefaultConfig', message: 'Failed to execute change default config.', errorCode: 1 }));
+        ws.send(JSON.stringify({ type: 'error', message: 'Failed to execute change default config.', errorCode: 1 }));
       }
     }
     else if(message == 'closeHMP')
@@ -115,11 +115,11 @@ wss.on('connection', ws =>
       const response = await closeHMP(ws.client);
       if(response.message == 'ACK\n')
       {
-        ws.send(JSON.stringify({ type: 'hmpClose', message: 'HMP connection closed. ', errorCode: 0 }));
+        ws.send(JSON.stringify({ type: 'success', message: 'HMP connection closed. ', errorCode: 0 }));
       }
       else
       {
-        ws.send(JSON.stringify({ type: 'hmpClose', message: 'Failed to close HMP connection.', errorCode: 1 }));
+        ws.send(JSON.stringify({ type: 'error', message: 'Failed to close HMP connection.', errorCode: 1 }));
       }
     }
   });

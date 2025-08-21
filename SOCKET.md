@@ -19,7 +19,7 @@ Each message should be sent as a JSON object.
 **Response:**
 ```json
 {
-  "type": "discover",
+  "type": "success",
   "results": [
     { "ipAddress": "10.84.30.91", "devices": [] },
     { "ipAddress": "192.168.3.99", "devices": [ /* device objects */ ] }
@@ -43,7 +43,21 @@ Each message should be sent as a JSON object.
 ```
 
 **Response:**
-- No response from server. Device will wink.
+```json
+{
+  "type": "success",
+  "message": "Wink command sent successfully.",
+  "errorCode": 0
+}
+```
+If the device is not found:
+```json
+{
+  "type": "error",
+  "message": "Device not found for wink command.",
+  "errorCode": 1
+}
+```
 
 ---
 
@@ -62,16 +76,25 @@ Each message should be sent as a JSON object.
 ```
 
 **Response:**
+- After successful IP change, the server automatically performs device discovery and responds with the updated device list.
 ```json
 {
-  "type": "discover",
+  "type": "success",
   "results": [
     { "ipAddress": "10.84.30.91", "devices": [] },
     { "ipAddress": "192.168.3.99", "devices": [ /* device objects */ ] }
-  ]
+  ],
+  "errorCode": 0
 }
 ```
-- After successful IP change, the server automatically performs device discovery and responds with the updated device list.
+If an error occurs:
+```json
+{
+  "type": "error",
+  "message": "Failed to change device IP",
+  "errorCode": 1
+}
+```
 
 ---
 
@@ -92,7 +115,21 @@ Each message should be sent as a JSON object.
 ```
 
 **Response:**
-- 
+```json
+{
+  "type": "success",
+  "message": "Change config executed.",
+  "errorCode": 0
+}
+```
+If an error occurs:
+```json
+{
+  "type": "error",
+  "message": "Failed to execute change config.",
+  "errorCode": 1
+}
+```
 
 ---
 
@@ -102,7 +139,123 @@ If an error occurs, the server responds with:
 ```json
 {
   "type": "error",
-  "message": "Error description"
+  "message": "Error description",
+  "errorCode": 1
+}
+```
+
+---
+
+### 6. HMP Connection
+
+**Request:**
+```json
+{
+  "message": "openHMP",
+  "IP": "192.168.3.100",
+  "port": 1023
+}
+```
+
+**Response:**
+```json
+{
+  "type": "success",
+  "message": "HMP connection opened.",
+  "errorCode": 0
+}
+```
+If failed:
+```json
+{
+  "type": "error",
+  "message": "Failed to open HMP connection.",
+  "errorCode": 1
+}
+```
+
+**To close HMP connection:**
+
+**Request:**
+```json
+{
+  "message": "closeHMP",
+  "IP": "192.168.3.100",
+  "port": 1023
+}
+```
+
+**Response:**
+```json
+{
+  "type": "success",
+  "message": "HMP connection closed.",
+  "errorCode": 0
+}
+```
+If failed:
+```json
+{
+  "type": "error",
+  "message": "Failed to close HMP connection.",
+  "errorCode": 1
+}
+```
+
+---
+
+### 7. XPRESS Function
+
+**Request:**
+```json
+{
+  "message": "xpressFunction",
+  "function": "XPRESS 1"
+}
+```
+
+**Response:**
+```json
+{
+  "type": "success",
+  "message": "Xpress function executed.",
+  "errorCode": 0
+}
+```
+If failed:
+```json
+{
+  "type": "error",
+  "message": "Failed to execute Xpress function.",
+  "errorCode": 1
+}
+```
+
+---
+
+### 8. Change Default Config
+
+**Request:**
+```json
+{
+  "message": "changeDefaultConfig"
+}
+```
+
+**Response:**
+```json
+{
+  "type": "success",
+  "message": "Change default config executed.",
+  "errorCode": 0
+}
+```
+If failed:
+```json
+{
+  "type": "error",
+  "message": "Failed to execute change default config.",
+  "errorCode": 1
 }
 ```
 
