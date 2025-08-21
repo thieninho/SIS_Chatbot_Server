@@ -2,7 +2,7 @@ const WebSocket = require('ws');
 const discover = require('./functions/discover');
 const wink = require('./functions/wink');
 const changeIP = require('./functions/changeIP');
-const { openHMP, closeHMP, xpressFunction, changeConfigHMP } = require('./functions/HMP.js');
+const { openHMP, closeHMP, commandHMP } = require('./functions/HMP.js');
 const wss = new WebSocket.Server({ port: 3333 });
 wss.on('connection', ws => 
 {
@@ -69,6 +69,7 @@ wss.on('connection', ws =>
     }
     else if(message == 'changeConfig')
     {
+      const response = await changeConfig(ws, data);
         setTimeout(() => {
         ws.send(JSON.stringify({
           type: 'changeConfig',
@@ -79,11 +80,11 @@ wss.on('connection', ws =>
     }
     else if(message == 'openHMP')
     {
-      const response = await openHMP(data);
+      const response = await openHMP(data.IP);
       console.log('HMP open response:', response);
       if(response.message == '\x1BH\r\n\x1BS\r\n' || response.message == '\x1BH\r\n')
       {
-        ws.client = response.client;
+        ws.clientHMP = response.client;
         ws.send(JSON.stringify({ type: 'success', message: 'HMP connection opened.', errorCode: 0 }));
       }
       else
@@ -93,7 +94,7 @@ wss.on('connection', ws =>
     }
     else if(message == 'xpressFunction')
     {
-      const response = await xpressFunction(ws.client, data.function);
+      const response = await commandHMP(ws.clientHMP, data.function);
       if(response.message == 'ACK\n')
       {
         ws.send(JSON.stringify({ type: 'success', message: 'Xpress function executed.', errorCode: 0 }));
@@ -105,7 +106,7 @@ wss.on('connection', ws =>
     }
     else if(message == 'changeDefaultConfig')
     {
-      const response = await changeConfigHMP(ws.client, "Default");
+      const response = await commandHMP(ws.clientHMP, "CHANGE_CFG Default");
       console.log('Change default config response:', response);
       if(response.message == 'ACK\n')
       {
@@ -118,7 +119,7 @@ wss.on('connection', ws =>
     }
     else if(message == 'closeHMP')
     {
-      const response = await closeHMP(ws.client);
+      const response = await closeHMP(ws.clientHMP);
       if(response.message == 'ACK\n')
       {
         ws.send(JSON.stringify({ type: 'success', message: 'HMP connection closed. ', errorCode: 0 }));

@@ -1,10 +1,10 @@
 const net = require('net');
 
-function openHMP(data) {
+function openHMP(IP) {
   return new Promise((resolve, reject) => {
     const client = new net.Socket();
-    client.connect(1023, data.IP, () => {
-      console.log(`Connected to ${data.IP}:1023`);
+    client.connect(1023, IP, () => {
+      console.log(`Connected to ${IP}:1023`);
       client.write('\x1B[C\x1B[B\r\n');
     });
 
@@ -44,25 +44,9 @@ function closeHMP(client)
     });
 }
 
-function xpressFunction(client, command) {
+function commandHMP(client, command) {
   return new Promise((resolve, reject) => {
     client.write(`${command}\r\n`);
-    const onData = (data) => {
-      client.removeListener('error', onError);
-      resolve({message: data.toString()});
-    };
-    const onError = (err) => {
-      client.removeListener('data', onData);
-      reject(err);
-    };
-    client.once('data', onData);
-    client.once('error', onError);
-  });
-}
-
-function changeConfigHMP(client, configName) {
-  return new Promise((resolve, reject) => {
-    client.write(`CHANGE_CFG ${configName}\r\n`);
     const onData = (data) => {
       client.removeListener('error', onError);
       resolve({message: data.toString()});
@@ -80,6 +64,5 @@ module.exports =
 {
   openHMP,
   closeHMP,
-  xpressFunction,
-  changeConfigHMP
+  commandHMP
 }

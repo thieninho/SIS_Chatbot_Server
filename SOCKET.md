@@ -109,6 +109,7 @@ If an error occurs:
   "serial": "C18P00945",
   "IP": "192.168.3.100",
   "config": {
+    "name": "myConfigName",
     "symbology": "QR"
   }
 }

@@ -4,6 +4,7 @@ const path = require('path');
 const unzipper = require('unzipper');
 const xml2js = require('xml2js');
 const archiver = require('archiver');
+const { openHMP, closeHMP, commandHMP} = require('./HMP.js');
 
 async function downloadZipFile(sftp, remoteFile, localZip) {
   return new Promise((resolve, reject) => {
@@ -12,7 +13,7 @@ async function downloadZipFile(sftp, remoteFile, localZip) {
         console.error('Download error:', err.message);
         reject(err);
       } else {
-        console.log('Downloaded .zip file successfully');
+        console.log(`Downloaded ${remoteFile} file successfully`);
         resolve();
       }
     });
@@ -174,54 +175,106 @@ async function uploadZipFileToFolder(sftp, localZip, remoteFolder) {
   });
 }
 
-function connectSSHAndUnzipAndUpload() {
-  const conn = new Client();
-  conn.on('ready', () => {
-    console.log('SSH Connection established');
-    conn.sftp(async (err, sftp) => {
-      if (err) {
-        console.error('SFTP error:', err.message);
-        conn.end();
-        return;
-      }
-      const remoteEnvironmentFile = '/media/user/AppData/Environment/Environment.zip';
-      const localEnvironmentFolder = path.join(__dirname, '../assets/Environment');
-      const localZip = path.join(__dirname, '../assets/Environment.zip');
-      const xmlPath = path.join(localEnvironmentFolder, 'Environment.xml');
-      const remoteDefaultJobFile = '/media/boot/Current/App/AppFiles/Templates/DefaultJob.zip';
-      const localDefaultJobFolder = path.join(__dirname, '../assets/DefaultJob');
-      const xmlJobPath = path.join(localDefaultJobFolder, 'DefaultJob.xml');
-      const xmlJobOutputPath = path.join(localDefaultJobFolder, 'Job.xml');
-      const localZipJob = path.join(__dirname, '../assets/test3.zip');
-      const remoteJobListFolder = '/media/user/AppData/Jobs/';
+async function changeConfig(ws, data) {
+  if (!ws.clientHMP) {
+    ws.send(JSON.stringify({ type: 'error', message: 'No HMP client available.', errorCode: 2 }));
+    return;
+  }
 
-      try {
-        // await downloadZipFile(sftp, remoteEnvironmentFile, localZip);
-        // await unzipZipFile(localZip, localEnvironmentFolder);
-        // await changeStartupJob("newConfig11122233xy", xmlPath);
-        // await zipFile(xmlPath, localZip, 'Environment.xml');
-        // await uploadZipFile(sftp, localZip, remoteEnvironmentFile);
+  try {
+    let response = await commandHMP(ws.clientHMP, "CHANGE_CFG Default");
+    if (response.message !== 'ACK\n') throw new Error('Failed to change default config.');
 
-        await downloadZipFile(sftp, remoteDefaultJobFile, localZip);
-        
-        await unzipZipFile(localZip, localDefaultJobFolder);
-        await changeSymbologyRaw("2", xmlJobPath, xmlJobOutputPath);
-        await zipFile(xmlJobOutputPath, localZipJob, 'Job.xml');
-        await uploadZipFileToFolder(sftp, localZipJob, remoteJobListFolder);
-      } catch (err) {
-        // Error already logged in each function
-      }
-      conn.end();
+    console.log('Change default config executed successfully');
+
+    response = await commandHMP(ws.clientHMP, `SAVE ${data.config.name}`);
+    if (response.message !== 'ACK\n') throw new Error(`Failed to save config ${data.config.name}.`);
+
+    console.log(`Save ${data.config.name} executed successfully`);
+
+    response = await commandHMP(ws.clientHMP, `STARTUP_CFG ${data.config.name}`);
+    if (response.message !== 'ACK\n') throw new Error(`Failed to set startup config ${data.config.name}.`);
+
+    console.log(`Startup config set to ${data.config.name} successfully`);
+
+    const clientSSH = await openSSHConnection(data.IP);
+    if( !clientSSH) {
+      throw new Error('Failed to open SSH connection.');
+    }
+    else
+    {
+      const respone = await downloadZipFile(clientSSH, `/media/user/AppData/Jobs/${data.config.name}.zip`, path.join(__dirname, '../assets/Environment.zip'));
+    }
+  } catch (err) {
+    ws.send(JSON.stringify({ type: 'error', message: err.message, errorCode: 1 }));
+  }
+}
+
+function openSSHConnection(ip) {
+  return new Promise((resolve, reject) => {
+    const client = new Client();
+    client.on('ready', () => {
+      console.log(`SSH Connection established to ${ip}`);
+      resolve(client);
+    }).on('error', (err) => {
+      console.error(`SSH Connection error to ${ip}:`, err.message);
+      reject(err);
+    }).connect({
+      host: ip,
+      port: 22,
+      username: 'root',
+      privateKey: fs.readFileSync(path.join(__dirname, '../assets/M120.key'))
     });
-  }).on('error', (err) => {
-    console.error('SSH Connection error:', err.message);
-  }).connect({
-    host: '192.168.3.120',
-    port: 22,
-    username: 'root',
-    privateKey: fs.readFileSync(path.join(__dirname, '../assets/M120.key'))
   });
 }
 
-// Example usage:
-connectSSHAndUnzipAndUpload();
+// function connectSSHAndUnzipAndUpload() {
+//   const conn = new Client();
+//   conn.on('ready', () => {
+//     console.log('SSH Connection established');
+//     conn.sftp(async (err, sftp) => {
+//       if (err) {
+//         console.error('SFTP error:', err.message);
+//         conn.end();
+//         return;
+//       }
+//       const remoteEnvironmentFile = '/media/user/AppData/Environment/Environment.zip';
+//       const localEnvironmentFolder = path.join(__dirname, '../assets/Environment');
+//       const localZip = path.join(__dirname, '../assets/Environment.zip');
+//       const xmlPath = path.join(localEnvironmentFolder, 'Environment.xml');
+//       const remoteDefaultJobFile = '/media/boot/Current/App/AppFiles/Templates/DefaultJob.zip';
+//       const localDefaultJobFolder = path.join(__dirname, '../assets/DefaultJob');
+//       const xmlJobPath = path.join(localDefaultJobFolder, 'DefaultJob.xml');
+//       const xmlJobOutputPath = path.join(localDefaultJobFolder, 'Job.xml');
+//       const localZipJob = path.join(__dirname, '../assets/test3.zip');
+//       const remoteJobListFolder = '/media/user/AppData/Jobs/';
+
+//       try {
+//         // await downloadZipFile(sftp, remoteEnvironmentFile, localZip);
+//         // await unzipZipFile(localZip, localEnvironmentFolder);
+//         // await changeStartupJob("newConfig11122233xy", xmlPath);
+//         // await zipFile(xmlPath, localZip, 'Environment.xml');
+//         // await uploadZipFile(sftp, localZip, remoteEnvironmentFile);
+
+//         await downloadZipFile(sftp, remoteDefaultJobFile, localZip);
+        
+//         await unzipZipFile(localZip, localDefaultJobFolder);
+//         await changeSymbologyRaw("2", xmlJobPath, xmlJobOutputPath);
+//         await zipFile(xmlJobOutputPath, localZipJob, 'Job.xml');
+//         await uploadZipFileToFolder(sftp, localZipJob, remoteJobListFolder);
+//       } catch (err) {
+//         // Error already logged in each function
+//       }
+//       conn.end();
+//     });
+//   }).on('error', (err) => {
+//     console.error('SSH Connection error:', err.message);
+//   }).connect({
+//     host: '192.168.3.120',
+//     port: 22,
+//     username: 'root',
+//     privateKey: fs.readFileSync(path.join(__dirname, '../assets/M120.key'))
+//   });
+// }
+
+
