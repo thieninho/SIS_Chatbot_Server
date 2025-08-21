@@ -46,7 +46,7 @@ function closeHMP(client)
 
 function xpressFunction(client, command) {
   return new Promise((resolve, reject) => {
-    client.write(`XPRESS ${command}\r\n`);
+    client.write(`${command}\r\n`);
     const onData = (data) => {
       client.removeListener('error', onError);
       resolve({message: data.toString()});
