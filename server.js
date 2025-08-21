@@ -3,7 +3,7 @@ const discover = require('./functions/discover');
 const wink = require('./functions/wink');
 const changeIP = require('./functions/changeIP');
 const { openHMP, closeHMP, xpressFunction, changeConfigHMP } = require('./functions/HMP.js');
-const wss = new WebSocket.Server({ port: 3000 });
+const wss = new WebSocket.Server({ port: 3333 });
 wss.on('connection', ws => 
 {
   console.log('WebSocket client connected');
@@ -131,4 +131,4 @@ wss.on('connection', ws =>
   });
 });
 
-console.log('WebSocket server is running on ws://localhost:3000');
+console.log('WebSocket server is running on ws://10.84.30.91:3333');

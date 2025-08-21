@@ -118,7 +118,7 @@ If an error occurs:
 ```json
 {
   "type": "success",
-  "message": "Change config executed.",
+  "message": "Function still not implemented, assume that device configuration was changed successfully",
   "errorCode": 0
 }
 ```
