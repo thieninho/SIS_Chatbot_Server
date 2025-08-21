@@ -69,7 +69,13 @@ wss.on('connection', ws =>
     }
     else if(message == 'changeConfig')
     {
-      
+        setTimeout(() => {
+        ws.send(JSON.stringify({
+          type: 'changeConfig',
+          message: 'Function still not implemented, assume that device configuration was changed successfully',
+          errorCode: 0
+        }));
+      }, 5000);
     }
     else if(message == 'openHMP')
     {
