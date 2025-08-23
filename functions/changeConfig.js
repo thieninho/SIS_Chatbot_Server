@@ -278,3 +278,6 @@ function openSSHConnection(ip) {
 // }
 
 
+module.exports = {
+  changeConfig
+};
