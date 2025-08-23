@@ -13,6 +13,7 @@ wss.on('connection', ws =>
   ws.on('message', async data => 
   {
     var data = JSON.parse(data);
+    console.log('Received:', data);
     var message = data.message;
     ws.send('ACK');
     if (message == 'discover') 
@@ -71,13 +72,6 @@ wss.on('connection', ws =>
     else if(message == 'changeConfig')
     {
       const response = await changeConfig(ws, data);
-        setTimeout(() => {
-        ws.send(JSON.stringify({
-          type: 'changeConfig',
-          message: 'Function still not implemented, assume that device configuration was changed successfully',
-          errorCode: 0
-        }));
-      }, 5000);
     }
     else if(message == 'openHMP')
     {

@@ -4,6 +4,8 @@ const path = require('path');
 const unzipper = require('unzipper');
 const xml2js = require('xml2js');
 const archiver = require('archiver');
+const { promisify } = require('util');
+const ping = require('ping');
 const { openHMP, closeHMP, commandHMP } = require('./HMP.js');
 
 async function downloadZipFile(sftp, remoteFile, localZip) {
@@ -62,86 +64,75 @@ async function changeStartupJob(newJobName, xmlPath) {
   console.log(`Changed <startupJob> to "${newJobName}"`);
 }
 
-async function changeSymbology(newSymbologyEnum, xmlPath) {
-  const xmlContent = fs.readFileSync(xmlPath, 'utf8');
-  const parser = new xml2js.Parser();
-  const builder = new xml2js.Builder();
-
-  let result;
-  try {
-    result = await parser.parseStringPromise(xmlContent);
-  } catch (err) {
-    console.error('XML parse error:', err.message);
-    throw err;
-  }
-
-  let changed = false;
-  if (
-    result.job &&
-    result.job.task &&
-    result.job.task[0] &&
-    result.job.task[0].operatingmode &&
-    result.job.task[0].operatingmode[0] &&
-    result.job.task[0].operatingmode[0].generalopmodesettings &&
-    result.job.task[0].operatingmode[0].generalopmodesettings[0] &&
-    result.job.task[0].operatingmode[0].generalopmodesettings[0].setupparameter2ddecoder
-  ) {
-    const setupparameter2ddecoderArr = result.job.task[0].operatingmode[0].generalopmodesettings[0].setupparameter2ddecoder;
-    setupparameter2ddecoderArr.forEach(decoder => {
-      if (
-        decoder.searchingsymbology &&
-        decoder.searchingsymbology[0] &&
-        decoder.searchingsymbology[0].value
-      ) {
-        decoder.searchingsymbology[0].value[0] = newSymbologyEnum;
-        changed = true;
-      }
-    });
-  }
-
-  if (!changed) {
-    throw new Error('searchingsymbology node not found');
-  }
-  const newXml = builder.buildObject(result);
-  fs.writeFileSync(xmlPath, newXml, 'utf8');
-  console.log(`Changed <searchingsymbology><value> to "${newSymbologyEnum}"`);
-}
-
-async function changeSymbologyRaw(newSymbologyEnum, xmlPath, outputXmlPath) {
+async function changeSymbologyRaw(newSymbologyEnum, xmlPath) {
   let xmlContent = await fs.promises.readFile(xmlPath, 'utf8');
   xmlContent = xmlContent.replace(
     /(<setupparameter2ddecoder[\s\S]*?<searchingsymbology[^>]*>\s*<value>)(.*?)(<\/value>)/,
     `$1${newSymbologyEnum}$3`
   );
-  await fs.promises.writeFile(outputXmlPath, xmlContent, 'utf8');
+  await fs.promises.writeFile(xmlPath, xmlContent, 'utf8');
   console.log(`Changed <searchingsymbology><value> inside <setupparameter2ddecoder> to "${newSymbologyEnum}"`);
 }
 
-async function zipFile(filePath, zipPath, fileName) {
+async function zipFolder(folderPath) {
   return new Promise((resolve, reject) => {
+    const fs = require('fs');
+    const archiver = require('archiver');
+    const path = require('path');
+
+    const folderName = path.basename(folderPath);
+    const zipPath = path.join(path.dirname(folderPath), `${folderName}.zip`);
+
     const output = fs.createWriteStream(zipPath);
     const archive = archiver('zip', { zlib: { level: 9 } });
 
     output.on('close', () => {
-      console.log(`Zipped ${fileName} to ${zipPath}`);
+      console.log(`Zipped files from ${folderName} to ${zipPath}`);
       resolve();
     });
+
     archive.on('error', (err) => {
       reject(err);
     });
 
     archive.pipe(output);
-    archive.file(filePath, { name: fileName });
+
+    // Read only files (not subdirectories) from folderPath
+    const files = fs.readdirSync(folderPath).filter(file => 
+      fs.statSync(path.join(folderPath, file)).isFile()
+    );
+
+    // Add each file to the zip, placing it in the root of the zip archive
+    files.forEach(file => {
+      archive.file(path.join(folderPath, file), { name: file });
+    });
+
     archive.finalize();
   });
 }
 
-async function uploadZipFile(sftp, localZip, remoteFile) {
+async function cleanAssetsFolder(assetsPath) {
+  const fs = require('fs').promises;
+  const path = require('path');
+
   try {
-    await sftp.fastPut(localZip, remoteFile);
-    console.log(`Uploaded ${localZip} to ${remoteFile} successfully`);
+    const items = await fs.readdir(assetsPath);
+    for (const item of items) {
+      if (item !== 'M120.key') {
+        const itemPath = path.join(assetsPath, item);
+        const stats = await fs.stat(itemPath);
+        if (stats.isDirectory()) {
+          await fs.rm(itemPath, { recursive: true, force: true });
+          console.log(`Deleted directory: ${itemPath}`);
+        } else {
+          await fs.unlink(itemPath);
+          console.log(`Deleted file: ${itemPath}`);
+        }
+      }
+    }
+    console.log(`Cleaned assets folder, preserving ${path.join(assetsPath, 'M120.key')}`);
   } catch (err) {
-    console.error('Upload error:', err.message);
+    console.error(`Error cleaning assets folder: ${err.message}`);
     throw err;
   }
 }
@@ -203,8 +194,24 @@ async function changeConfig(ws, data) {
     }
 
     try {
-      console.log('Config name:', data.config.name); // Debug config name
-      await downloadZipFile(sftp, `/media/user/AppData/Jobs/${data.config.name}.zip`, path.join(__dirname, '../assets/Environment.zip'));
+      console.log('Config name:', data.config.name);
+      await downloadZipFile(sftp, `/media/user/AppData/Jobs/${data.config.name}.zip`, path.join(__dirname, `../assets/${data.config.name}.zip`));
+      await unzipZipFile(path.join(__dirname, `../assets/${data.config.name}.zip`), path.join(__dirname, `../assets/${data.config.name}`));
+      const symbologyEnum = data.config.symbology === 'QR' ? "1" : "0"; // QR or Data Matrix
+      await changeSymbologyRaw(symbologyEnum, path.join(__dirname, `../assets/${data.config.name}/Job.xml`));
+      await zipFolder(path.join(__dirname, `../assets/${data.config.name}`));
+      await uploadZipFileToFolder(sftp, path.join(__dirname, `../assets/${data.config.name}.zip`), '/media/user/AppData/Jobs/');
+      // Send reboot command using the existing sftp connection
+      await sendRebootCommand(sftp);
+      console.log('Reboot command sent');
+      ws.send(JSON.stringify({ type: 'success', message: 'Configuration updated and reboot command sent successfully. Please wait for device to be ready.', errorCode: 0 }));
+      // Ping device until ready
+      await pingDeviceUntilReady(data.IP, { timeout: 300000, interval: 5000 });
+      setTimeout(() => {}, 5000); // Wait additional 5 seconds to ensure device is fully ready
+      console.log('Device is ready to use');
+      ws.send(JSON.stringify({ type: 'success', message: 'Device is ready to use.', errorCode: 0 }));
+      // Clean assets folder, preserving M120.key
+      await cleanAssetsFolder(path.join(__dirname, '../assets'));
     } finally {
       await sftp.end();
     }
@@ -215,6 +222,60 @@ async function changeConfig(ws, data) {
 
 function isDefaultConfigurationRunning(get_info_response) {
   return get_info_response.includes('Current Job: Default\n');
+}
+
+async function pingDeviceUntilReady(ip, options = {}) {
+  const { timeout = 300000, interval = 5000, maxAttempts = null } = options;
+
+  const startTime = Date.now();
+  let attempts = 0;
+
+  while (true) {
+    if (maxAttempts && attempts >= maxAttempts) {
+      throw new Error(`Device ${ip} not ready after ${maxAttempts} attempts`);
+    }
+    if (Date.now() - startTime > timeout) {
+      throw new Error(`Device ${ip} not ready after ${timeout / 1000}s timeout`);
+    }
+
+    try {
+      const res = await ping.promise.probe(ip, { timeout: 2 });
+      if (res.alive) {
+        console.log(`Device ${ip} is ready (ping time: ${res.time}ms)`);
+        return true;
+      }
+      console.log(`Device ${ip} not responding, retrying... (attempt ${attempts + 1})`);
+    } catch (err) {
+      console.log(`Ping error for ${ip}: ${err.message}, retrying...`);
+    }
+
+    attempts++;
+    await new Promise(resolve => setTimeout(resolve, interval));
+  }
+}
+
+async function sendRebootCommand(sftp) {
+  return new Promise((resolve, reject) => {
+    if (!sftp || !sftp.client) {
+      return reject(new Error('Invalid or closed SFTP client'));
+    }
+
+    sftp.client.exec('reboot', (err, stream) => {
+      if (err) {
+        console.error('Exec error:', err.message);
+        return reject(err);
+      }
+
+      stream.on('close', (code, signal) => {
+        console.log(`Reboot command executed, stream closed with code ${code}, signal ${signal}`);
+        resolve({ code, signal });
+      }).on('data', (data) => {
+        console.log('STDOUT:', data.toString());
+      }).stderr.on('data', (data) => {
+        console.error('STDERR:', data.toString());
+      });
+    });
+  });
 }
 
 async function openSSHConnection(ip) {
