@@ -1,11 +1,21 @@
 const net = require('net');
 
-function openHMP(IP) {
+function openHMP(IP,command) {
+  let sequence = '';
+  if(command == 'C')
+  {
+      sequence = `\x1B[C\r\n`;
+  }
+  else if(command == 'B')
+  {
+      sequence = `\x1B[B\r\n`;
+  }
+
   return new Promise((resolve, reject) => {
     const client = new net.Socket();
     client.connect(1023, IP, () => {
       console.log(`Connected to ${IP}:1023`);
-      client.write('\x1B[C\x1B[B\r\n');
+      client.write(sequence);
     });
 
     const onData = (data) => {

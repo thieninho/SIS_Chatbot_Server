@@ -2,7 +2,8 @@ const WebSocket = require('ws');
 const discover = require('./functions/discover');
 const wink = require('./functions/wink');
 const changeIP = require('./functions/changeIP');
-const { openHMP, closeHMP, commandHMP, changeConfig } = require('./functions/HMP.js');
+const { openHMP, closeHMP, commandHMP } = require('./functions/HMP.js');
+const { changeConfig } = require('./functions/changeConfig.js');
 const wss = new WebSocket.Server({ port: 3000 });
 wss.on('connection', ws => 
 {

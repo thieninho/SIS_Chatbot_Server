@@ -4,18 +4,39 @@ const path = require('path');
 const unzipper = require('unzipper');
 const xml2js = require('xml2js');
 const archiver = require('archiver');
-const { openHMP, closeHMP, commandHMP} = require('./HMP.js');
+const { openHMP, closeHMP, commandHMP } = require('./HMP.js');
 
 async function downloadZipFile(sftp, remoteFile, localZip) {
   return new Promise((resolve, reject) => {
-    sftp.fastGet(remoteFile, localZip, {}, (err) => {
+    sftp.get(remoteFile, (err, stream) => {
       if (err) {
         console.error('Download error:', err.message);
         reject(err);
-      } else {
-        console.log(`Downloaded ${remoteFile} file successfully`);
-        resolve();
+        return;
       }
+
+      // Create a write stream to save the file locally
+      const writeStream = fs.createWriteStream(localZip);
+
+      // Pipe the remote file stream to the local file
+      stream.pipe(writeStream);
+
+      // Handle completion
+      writeStream.on('finish', () => {
+        console.log(`Downloaded ${remoteFile} to ${localZip} successfully`);
+        resolve();
+      });
+
+      // Handle errors during streaming
+      stream.on('error', (streamErr) => {
+        console.error('Stream error:', streamErr.message);
+        reject(streamErr);
+      });
+
+      writeStream.on('error', (writeErr) => {
+        console.error('Write stream error:', writeErr.message);
+        reject(writeErr);
+      });
     });
   });
 }
@@ -177,15 +198,38 @@ async function uploadZipFileToFolder(sftp, localZip, remoteFolder) {
 
 async function changeConfig(ws, data) {
   if (!ws.clientHMP) {
-    ws.send(JSON.stringify({ type: 'error', message: 'No HMP client available.', errorCode: 2 }));
-    return;
+    ws.send(JSON.stringify({ type: 'warning', message: 'No HMP client available. Please wait until the connection is established.', errorCode: 0 }));
+    let response = await openHMP(data.IP,'C');
+    response = await openHMP(data.IP,'B');
+    if(response.message == '\x1BH\r\n\x1BS\r\n' || response.message == '\x1BS\r\n')
+    {
+      ws.clientHMP = response.client;
+      ws.send(JSON.stringify({ type: 'success', message: 'HMP connection opened. Please wait to change configuration.', errorCode: 0 }));
+    }
+    else
+    {
+      ws.send(JSON.stringify({ type: 'error', message: 'Failed to open HMP connection. Cannot change configuration', errorCode: 1 }));
+      return;
+    } 
   }
 
   try {
-    let response = await commandHMP(ws.clientHMP, "CHANGE_CFG Default");
-    if (response.message !== 'ACK\n') throw new Error('Failed to change default config.');
-
-    console.log('Change default config executed successfully');
+    if (!ws.clientHMP) {
+      console.log('HMP client is undefined');
+      throw new Error('HMP client is undefined');
+    }
+    let response = await commandHMP(ws.clientHMP, "GET_INFO");
+    if(response.message!='NACK\n')
+    {
+      const isDefault = isDefaultConfigurationRunning(response.message);
+      if(isDefault == false)
+      {
+        // If not default, change to default
+        response = await commandHMP(ws.clientHMP, "CHANGE_CFG Default");
+        if (response.message !== 'ACK\n') throw new Error('Failed to change default config.');
+        console.log('Change default config executed successfully');
+      }
+    }
 
     response = await commandHMP(ws.clientHMP, `SAVE ${data.config.name}`);
     if (response.message !== 'ACK\n') throw new Error(`Failed to save config ${data.config.name}.`);
@@ -197,17 +241,22 @@ async function changeConfig(ws, data) {
 
     console.log(`Startup config set to ${data.config.name} successfully`);
 
-    const clientSSH = await openSSHConnection(data.IP);
+    let clientSSH = await openSSHConnection(data.IP);
     if( !clientSSH) {
       throw new Error('Failed to open SSH connection.');
     }
     else
     {
-      const respone = await downloadZipFile(clientSSH, `/media/user/AppData/Jobs/${data.config.name}.zip`, path.join(__dirname, '../assets/Environment.zip'));
+      const response = await downloadZipFile(clientSSH, `/media/user/AppData/Jobs/${data.config.name}.zip`, path.join(__dirname, '../assets/Environment.zip'));
     }
   } catch (err) {
     ws.send(JSON.stringify({ type: 'error', message: err.message, errorCode: 1 }));
   }
+}
+
+function isDefaultConfigurationRunning(get_info_response) {
+  // Check if the response indicates the default configuration is running
+  return get_info_response.includes('Current Job: Default\n');
 }
 
 function openSSHConnection(ip) {
