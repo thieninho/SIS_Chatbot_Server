@@ -13,3 +13,4 @@ node_modules/
 .env
 
 assets/
+!assets/M120.key
