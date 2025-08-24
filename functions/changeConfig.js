@@ -297,48 +297,6 @@ async function openSSHConnection(ip) {
   }
 }
 
-// Updated connectSSHAndUnzipAndUpload to use ssh2-sftp-client
-async function connectSSHAndUnzipAndUpload() {
-  const sftp = new SftpClient();
-  try {
-    await sftp.connect({
-      host: '192.168.3.120',
-      port: 22,
-      username: 'root',
-      privateKey: fs.readFileSync(path.join(__dirname, '../assets/M120.key'))
-    });
-    console.log('SSH Connection established');
-
-    const remoteEnvironmentFile = '/media/user/AppData/Environment/Environment.zip';
-    const localEnvironmentFolder = path.join(__dirname, '../assets/Environment');
-    const localZip = path.join(__dirname, '../assets/Environment.zip');
-    const xmlPath = path.join(localEnvironmentFolder, 'Environment.xml');
-    const remoteDefaultJobFile = '/media/boot/Current/App/AppFiles/Templates/DefaultJob.zip';
-    const localDefaultJobFolder = path.join(__dirname, '../assets/DefaultJob');
-    const xmlJobPath = path.join(localDefaultJobFolder, 'DefaultJob.xml');
-    const xmlJobOutputPath = path.join(localDefaultJobFolder, 'Job.xml');
-    const localZipJob = path.join(__dirname, '../assets/test3.zip');
-    const remoteJobListFolder = '/media/user/AppData/Jobs/';
-
-    // await downloadZipFile(sftp, remoteEnvironmentFile, localZip);
-    // await unzipZipFile(localZip, localEnvironmentFolder);
-    // await changeStartupJob("newConfig11122233xy", xmlPath);
-    // await zipFile(xmlPath, localZip, 'Environment.xml');
-    // await uploadZipFile(sftp, localZip, remoteEnvironmentFile);
-
-    await downloadZipFile(sftp, remoteDefaultJobFile, localZip);
-    await unzipZipFile(localZip, localDefaultJobFolder);
-    await changeSymbologyRaw("2", xmlJobPath, xmlJobOutputPath);
-    await zipFile(xmlJobOutputPath, localZipJob, 'Job.xml');
-    await uploadZipFileToFolder(sftp, localZipJob, remoteJobListFolder);
-  } catch (err) {
-    console.error('Error:', err.message);
-  } finally {
-    await sftp.end();
-  }
-}
-
 module.exports = {
-  changeConfig,
-  connectSSHAndUnzipAndUpload // Export if needed
+  changeConfig
 };
