@@ -23,7 +23,16 @@ Each message should be sent as a JSON object.
   "results": [
     { "ipAddress": "10.84.30.91", "devices": [] },
     { "ipAddress": "192.168.3.99", "devices": [ /* device objects */ ] }
-  ]
+  ],
+  "errorCode": 0
+}
+```
+If an error occurs:
+```json
+{
+  "type": "error",
+  "message": "Error processing: Error description",
+  "errorCode": 1
 }
 ```
 
@@ -31,7 +40,8 @@ Each message should be sent as a JSON object.
 
 ### 2. Wink Device
 
-> **Note:** For actions requiring device identification, you may provide either `serial`, `IP`, or both.
+> **Note:** You must run `"discover"` first before using `"wink"`.  
+> For actions requiring device identification, you may provide either `serial`, `IP`, or both.
 
 **Request:**
 ```json
@@ -50,11 +60,19 @@ Each message should be sent as a JSON object.
   "errorCode": 0
 }
 ```
-If the device is not found:
+If the device is not found or discover was not run:
 ```json
 {
   "type": "error",
   "message": "Device not found for wink command.",
+  "errorCode": 1
+}
+```
+or
+```json
+{
+  "type": "error",
+  "message": "No discovered data available. Run discover first.",
   "errorCode": 1
 }
 ```
@@ -63,7 +81,8 @@ If the device is not found:
 
 ### 3. Change Device IP
 
-> **Note:** For actions requiring device identification, you may provide either `serial`, `IP`, or both.
+> **Note:** You must run `"discover"` first before using `"changeIP"`.  
+> For actions requiring device identification, you may provide either `serial`, `IP`, or both.
 
 **Request:**
 ```json
@@ -87,11 +106,11 @@ If the device is not found:
   "errorCode": 0
 }
 ```
-If an error occurs:
+If an error occurs or discover was not run:
 ```json
 {
   "type": "error",
-  "message": "Failed to change device IP",
+  "message": "No discovered data available. Run discover first.",
   "errorCode": 1
 }
 ```
@@ -100,7 +119,7 @@ If an error occurs:
 
 ### 4. Change Device Configuration
 
-> **Note:** For actions requiring device identification, you may provide either `serial`, `IP`, or both.
+> **Note:** The server will attempt to open an HMP connection if not already open.
 
 **Request:**
 ```json
@@ -119,7 +138,7 @@ If an error occurs:
 ```json
 {
   "type": "success",
-  "message": "Function still not implemented, assume that device configuration was changed successfully",
+  "message": "Configuration updated and reboot command sent successfully. Please wait for device to be ready.",
   "errorCode": 0
 }
 ```
@@ -131,6 +150,14 @@ If an error occurs:
   "errorCode": 1
 }
 ```
+If HMP connection is not ready:
+```json
+{
+  "type": "warning",
+  "message": "No HMP client available. Please wait until the connection is established.",
+  "errorCode": 0
+}
+```
 
 ---
 
@@ -140,7 +167,7 @@ If an error occurs, the server responds with:
 ```json
 {
   "type": "error",
-  "message": "Error description",
+  "message": "Error processing: Error description",
   "errorCode": 1
 }
 ```
@@ -170,7 +197,7 @@ If failed:
 ```json
 {
   "type": "error",
-  "message": "Failed to open HMP connection.",
+  "message": "Failed to open HMP connection: Invalid response",
   "errorCode": 1
 }
 ```
@@ -207,11 +234,12 @@ If failed:
 
 ### 7. XPRESS Function
 
+> **Note:** The server always sends `"XPRESS 1"` regardless of the `"function"` field.
+
 **Request:**
 ```json
 {
-  "message": "xpressFunction",
-  "function": "XPRESS 1"
+  "message": "xpressFunction"
 }
 ```
 
@@ -267,6 +295,6 @@ If failed:
 - Always send messages as JSON objects.
 - The server responds with JSON objects.
 - For actions requiring device identification, you may provide either `serial`, `IP` or both.
+- You must run `"discover"` before `"wink"` or `"changeIP"`.
 - After changing a device's IP, the server will automatically rediscover devices and send an updated list.
-
----
+- For `"changeConfig"`, the server will open HMP if needed and may send a warning if not ready.
