@@ -152,17 +152,18 @@ async function uploadZipFileToFolder(sftp, localZip, remoteFolder) {
 async function changeConfig(ws, data) {
   if (!ws.clientHMP) {
     ws.send(JSON.stringify({ type: 'warning', message: 'No HMP client available. Please wait until the connection is established.', errorCode: 0 }));
-    let response = await openHMP(data.IP, 'C');
-    response = await openHMP(data.IP, 'B');
-    if (response.message === '\x1BH\r\n\x1BS\r\n' || response.message === '\x1BS\r\n') {
+    const response = await openHMP(parsedData.IP, ['C', 'B']);
+    const lastMessage = response.messages[response.messages.length - 1];
+    if (lastMessage === '\x1BH\r\n\x1BS\r\n' || lastMessage === '\x1BS\r\n') {
       ws.clientHMP = response.client;
       ws.send(JSON.stringify({ type: 'success', message: 'HMP connection opened. Please wait to change configuration.', errorCode: 0 }));
     } else {
-      ws.send(JSON.stringify({ type: 'error', message: 'Failed to open HMP connection. Cannot change configuration', errorCode: 1 }));
+      response.client.destroy();
+      ws.send(JSON.stringify({ type: 'error', message: `Failed to open HMP connection. Cannot change configuration`, errorCode: 1 }));
       return;
     }
   }
-
+  
   try {
     if (!ws.clientHMP) {
       console.log('HMP client is undefined');
@@ -207,8 +208,9 @@ async function changeConfig(ws, data) {
       ws.send(JSON.stringify({ type: 'success', message: 'Configuration updated and reboot command sent successfully. Please wait for device to be ready.', errorCode: 0 }));
       // Ping device until ready
       await pingDeviceUntilReady(data.IP, { timeout: 300000, interval: 5000 });
-      setTimeout(() => {}, 5000); // Wait additional 5 seconds to ensure device is fully ready
-      console.log('Device is ready to use');
+      // Wait for 5 seconds before proceeding
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      console.log('Waited 5 seconds after device readiness');
       ws.send(JSON.stringify({ type: 'success', message: 'Device is ready to use.', errorCode: 0 }));
       // Clean assets folder, preserving M120.key
       await cleanAssetsFolder(path.join(__dirname, '../assets'));

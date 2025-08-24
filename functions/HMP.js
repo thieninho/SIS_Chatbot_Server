@@ -1,49 +1,72 @@
 const net = require('net');
 
-function openHMP(IP,command) {
-  let sequence = '';
-  if(command == 'C')
-  {
-      sequence = `\x1B[C\r\n`;
-  }
-  else if(command == 'B')
-  {
-      sequence = `\x1B[B\r\n`;
+function openHMP(IP, commands) {
+  if (!Array.isArray(commands) || !commands.every(cmd => ['C', 'B'].includes(cmd))) {
+    return Promise.reject(new Error(`Invalid commands: ${commands}`));
   }
 
   return new Promise((resolve, reject) => {
     const client = new net.Socket();
-    client.connect(1023, IP, () => {
-      console.log(`Connected to ${IP}:1023`);
+    const timeoutMs = 5000; // 5-second timeout per command
+    const responses = [];
+    let currentCommandIndex = 0;
+
+    const sendNextCommand = () => {
+      if (currentCommandIndex >= commands.length) {
+        clearTimeout(timeout);
+        client.removeListener('data', onData);
+        client.removeListener('error', onError);
+        resolve({ client, messages: responses });
+        return;
+      }
+
+      const command = commands[currentCommandIndex];
+      const sequence = command === 'C' ? `\x1B[C\r\n` : `\x1B[B\r\n`;
       client.write(sequence);
-    });
+      console.log(`Sent command ${command} to ${IP}:1023`);
+      timeout = setTimeout(onTimeout, timeoutMs);
+    };
 
     const onData = (data) => {
-      client.removeListener('error', onError);
-      resolve({ client, message: data.toString() }); // Return the connected client after first response
+      clearTimeout(timeout); // Clear timeout for current command
+      responses.push(data.toString());
+      currentCommandIndex++;
+      sendNextCommand();
     };
+
     const onError = (err) => {
+      clearTimeout(timeout);
       client.removeListener('data', onData);
+      client.destroy();
       reject(err);
     };
-    client.once('data', onData);
+
+    const onTimeout = () => {
+      client.removeListener('data', onData);
+      client.removeListener('error', onError);
+      reject(new Error(`No response from ${IP}:1023 for command ${commands[currentCommandIndex]} after ${timeoutMs / 1000}s`));
+    };
+
+    let timeout = setTimeout(onTimeout, timeoutMs);
+
+    client.connect(1023, IP, () => {
+      console.log(`Connected to ${IP}:1023`);
+      sendNextCommand();
+    });
+
     client.once('error', onError);
+    client.on('data', onData);
   });
 }
 
 function closeHMP(client) 
 {  
     return new Promise((resolve, reject) => {
-        // const client = new net.Socket();
-        // client.connect(1023, '192.168.3.120', () => {
-        //     console.log('Connected to 192.168.3.120:1023');
-        //     client.write('\x1B[A\r\n');
-        // });
         client.write('\x1B[A\r\n');
           
         const onData = (data) => {
             client.removeListener('error', onError);
-            resolve({ client, message: data.toString() }); // Return the connected client after first response
+            resolve({ client, message: data.toString() });
         };
         const onError = (err) => {
             client.removeListener('data', onData);

@@ -5,13 +5,13 @@ const findDeviceBySerial = require('../lib/basic.js').findDeviceBySerial;
 function wink(foundDevices, dataFromMessage) {
     return new Promise((resolve, reject) => {
         let foundDevice = "";
-        if (dataFromMessage.serial !== undefined) 
+        if (dataFromMessage.IP !== undefined) 
         {
-            foundDevice = findDeviceBySerial(foundDevices, dataFromMessage.serial);
+            foundDevice = findDeviceByIP(foundDevices, dataFromMessage.IP);
         } 
         else 
         {
-            foundDevice = findDeviceByIP(foundDevices, dataFromMessage.IP);
+            foundDevice = findDeviceBySerial(foundDevices, dataFromMessage.serial);
         }
         if (foundDevice != undefined) 
         {
