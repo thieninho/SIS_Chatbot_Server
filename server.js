@@ -67,7 +67,7 @@ wss.on('connection', ws => {
         }
       } else if (message === 'xpressFunction') {
         console.log('Executing Xpress function:', parsedData.function);
-        const response = await commandHMP(ws.clientHMP, "XPRESS 1");
+        const response = await commandHMP(ws.clientHMP, parsedData.function);
         if (response.message === 'ACK\n') {
           ws.send(JSON.stringify({ type: 'success', message: 'Xpress function executed.', errorCode: 0 }));
         } else {
@@ -83,7 +83,7 @@ wss.on('connection', ws => {
         }
       } else if (message === 'closeHMP') {
         const response = await closeHMP(ws.clientHMP);
-        if (response.message === '\x1BX\r\n') {
+        if (response.message == '\x1B[X') {
           ws.send(JSON.stringify({ type: 'success', message: 'HMP connection closed.', errorCode: 0 }));
         } else {
           ws.send(JSON.stringify({ type: 'error', message: 'Failed to close HMP connection.', errorCode: 1 }));
