@@ -1,3 +1,4 @@
+const { get } = require('http');
 const os = require('os');
 const sendUdpBroadcastAndListen = require('./sendUdpBroadcastAndListen.js').sendUdpBroadcastAndListen;
 function getIPv4Addresses() 
@@ -37,9 +38,35 @@ async function getAllDevices(ipAddress)
     device.mac = getMAC(response.response);
     device.serial = getDeviceSerial(response.response);
     device.netAddress = getDeviceNetAddress(response.response);
-    allFoundDevices.push(device);
+    device.isSimulator = getDeviceSimulator(response.response);
+    device.modelName = getDeviceModelName(response.response);
+    // Check if a device with identical properties already exists
+    const isDuplicate = allFoundDevices.some(existingDevice => 
+      existingDevice.address === device.address &&
+      existingDevice.family === device.family &&
+      existingDevice.mac === device.mac &&
+      existingDevice.serial === device.serial &&
+      existingDevice.netAddress === device.netAddress &&
+      existingDevice.isSimulator === device.isSimulator &&
+      existingDevice.modelName === device.modelName
+    );
+    if (!isDuplicate) {
+      allFoundDevices.push(device);
+    }
   }
   return allFoundDevices;
+}
+
+function getDeviceModelName(response)
+{
+    const match = response.match(/DeviceModelName=([^;]*)/);
+    return match ? match[1] : null;
+}
+
+function getDeviceSimulator(response)
+{
+    const match = response.match(/IsSimulator=([^;]*)/);
+    return match ? match[1] : null;
 }
 
 function getDeviceFamily(response) 
