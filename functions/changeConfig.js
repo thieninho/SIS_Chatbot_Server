@@ -150,14 +150,14 @@ async function uploadZipFileToFolder(sftp, localZip, remoteFolder) {
 }
 
 async function changeConfig(ws, data) {
-  if(data.config.name == 'undefined')
+  if(data.configName == 'undefined')
   {
-    data.config.name = 'myDefault';
+    data.configName = 'myDefault';
     ws.send(JSON.stringify({ type: 'warning', message: 'No config name provided, using "myDefault".', errorCode: 0 }));
   }
   if (!ws.clientHMP) {
     ws.send(JSON.stringify({ type: 'warning', message: 'No HMP client available. Please wait until the connection is established.', errorCode: 0 }));
-    const response = await openHMP(parsedData.IP, ['C', 'B']);
+    const response = await openHMP(data.IP, ['C', 'B']);
     const lastMessage = response.messages[response.messages.length - 1];
     if (lastMessage === '\x1BH\r\n\x1BS\r\n' || lastMessage === '\x1BS\r\n') {
       ws.clientHMP = response.client;
@@ -184,15 +184,15 @@ async function changeConfig(ws, data) {
       }
     }
 
-    response = await commandHMP(ws.clientHMP, `SAVE ${data.config.name}`);
-    if (response.message !== 'ACK\n') throw new Error(`Failed to save config ${data.config.name}.`);
+    response = await commandHMP(ws.clientHMP, `SAVE ${data.configName}`);
+    if (response.message !== 'ACK\n') throw new Error(`Failed to save config ${data.configName}.`);
 
-    console.log(`Save ${data.config.name} executed successfully`);
+    console.log(`Save ${data.configName} executed successfully`);
 
-    response = await commandHMP(ws.clientHMP, `STARTUP_CFG ${data.config.name}`);
-    if (response.message !== 'ACK\n') throw new Error(`Failed to set startup config ${data.config.name}.`);
+    response = await commandHMP(ws.clientHMP, `STARTUP_CFG ${data.configName}`);
+    if (response.message !== 'ACK\n') throw new Error(`Failed to set startup config ${data.configName}.`);
 
-    console.log(`Startup config set to ${data.config.name} successfully`);
+    console.log(`Startup config set to ${data.configName} successfully`);
 
     const sftp = await openSSHConnection(data.IP);
     if (!sftp) {
@@ -200,13 +200,13 @@ async function changeConfig(ws, data) {
     }
 
     try {
-      console.log('Config name:', data.config.name);
-      await downloadZipFile(sftp, `/media/user/AppData/Jobs/${data.config.name}.zip`, path.join(__dirname, `../assets/${data.config.name}.zip`));
-      await unzipZipFile(path.join(__dirname, `../assets/${data.config.name}.zip`), path.join(__dirname, `../assets/${data.config.name}`));
+      console.log('Config name:', data.configName);
+      await downloadZipFile(sftp, `/media/user/AppData/Jobs/${data.configName}.zip`, path.join(__dirname, `../assets/${data.configName}.zip`));
+      await unzipZipFile(path.join(__dirname, `../assets/${data.configName}.zip`), path.join(__dirname, `../assets/${data.configName}`));
       const symbologyEnum = data.config.symbology === 'QR' ? "1" : "0"; // QR or Data Matrix
-      await changeSymbologyRaw(symbologyEnum, path.join(__dirname, `../assets/${data.config.name}/Job.xml`));
-      await zipFolder(path.join(__dirname, `../assets/${data.config.name}`));
-      await uploadZipFileToFolder(sftp, path.join(__dirname, `../assets/${data.config.name}.zip`), '/media/user/AppData/Jobs/');
+      await changeSymbologyRaw(symbologyEnum, path.join(__dirname, `../assets/${data.configName}/Job.xml`));
+      await zipFolder(path.join(__dirname, `../assets/${data.configName}`));
+      await uploadZipFileToFolder(sftp, path.join(__dirname, `../assets/${data.configName}.zip`), '/media/user/AppData/Jobs/');
       // Send reboot command using the existing sftp connection
       await sendRebootCommand(sftp);
       console.log('Reboot command sent');

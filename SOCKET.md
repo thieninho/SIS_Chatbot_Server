@@ -127,8 +127,8 @@ If an error occurs or discover was not run:
   "message": "changeConfig",
   "serial": "C18P00945",
   "IP": "192.168.3.100",
+  "configName": "myConfigName",
   "config": {
-    "name": "myConfigName",
     "symbology": "QR"
   }
 }
