@@ -211,11 +211,14 @@ async function changeConfig(ws, data) {
       await sendRebootCommand(sftp);
       console.log('Reboot command sent');
       ws.send(JSON.stringify({ type: 'success', message: 'Configuration updated and reboot command sent successfully. Please wait for device to be ready.', errorCode: 0 }));
+      // Wait for 10 seconds for device goes to reboot mode
+      await new Promise(resolve => setTimeout(resolve, 10000));
+      console.log('Waited 10 seconds after device readiness');
       // Ping device until ready
-      await pingDeviceUntilReady(data.IP, { timeout: 300000, interval: 5000 });
-      // Wait for 5 seconds before proceeding
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      console.log('Waited 5 seconds after device readiness');
+      await pingDeviceUntilReady(data.IP, { timeout: 300000, interval: 7000 });
+      // Wait for 10 seconds before proceeding
+      await new Promise(resolve => setTimeout(resolve, 10000));
+      console.log('Waited 10 seconds after device readiness');
       ws.send(JSON.stringify({ type: 'success', message: 'Device is ready to use.', errorCode: 0 }));
       // Clean assets folder, preserving M120.key
       await cleanAssetsFolder(path.join(__dirname, '../assets'));
