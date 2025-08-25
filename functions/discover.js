@@ -1,5 +1,5 @@
-const getIPv4Addresses = require('../network.js').getIPv4Addresses;
-const getAllDevices = require('../network.js').getAllDevices;
+const getIPv4Addresses = require('./network.js').getIPv4Addresses;
+const getAllDevices = require('./network.js').getAllDevices;
 
 function discover() {
   return new Promise((resolve, reject) => {

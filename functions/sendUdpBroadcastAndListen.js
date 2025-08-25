@@ -12,7 +12,7 @@ function sendUdpBroadcastAndListen(sourceIp, payload_string, options = {})
   return new Promise((resolve, reject) => 
   {
     const responses = [];
-    const socket = dgram.createSocket('udp4');
+    const socket = dgram.createSocket({type: 'udp4', reuseAddr: true });
 
     socket.on('error', (err) => 
     {
