@@ -59,22 +59,50 @@ function openHMP(IP, commands) {
   });
 }
 
-function closeHMP(client) 
+function closeHMP(client, IP) 
 {  
-    return new Promise((resolve, reject) => {
-        client.write('\x1B[A\r\n');
-          
-        const onData = (data) => {
-            client.removeListener('error', onError);
-            resolve({ client, message: data.toString() });
-        };
-        const onError = (err) => {
-            client.removeListener('data', onData);
-            reject(err);
-        };
-        client.once('data', onData);
-        client.once('error', onError);
-    });
+  return new Promise((resolve, reject) => {
+    let targetClient = client;
+
+    // Check if client is valid and not destroyed
+    if (!targetClient || !(targetClient instanceof net.Socket) || targetClient.destroyed) {
+      if (!IP) {
+        reject(new Error('No valid client provided and no IP address specified for new connection'));
+        return;
+      }
+      console.log(`No valid client provided, creating new connection to ${IP}:1023`);
+      targetClient = new net.Socket();
+
+      // Connect to the specified IP and port
+      targetClient.connect(1023, IP, () => {
+        console.log(`Connected to ${IP}:1023 for closeHMP`);
+      });
+
+      // Handle connection errors
+      targetClient.once('error', (err) => {
+        targetClient.removeListener('data', onData);
+        targetClient.destroy();
+        reject(new Error(`Failed to connect to ${IP}:1023: ${err.message}`));
+      });
+    }
+
+    // Proceed with sending the close command
+    targetClient.write('\x1B[A\r\n');
+
+    const onData = (data) => {
+      targetClient.removeListener('error', onError);
+      resolve({ client: targetClient, message: data.toString() });
+    };
+
+    const onError = (err) => {
+      targetClient.removeListener('data', onData);
+      targetClient.destroy();
+      reject(err);
+    };
+
+    targetClient.once('data', onData);
+    targetClient.once('error', onError);
+  });
 }
 
 function commandHMP(client, command) {

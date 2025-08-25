@@ -82,7 +82,7 @@ wss.on('connection', ws => {
           ws.send(JSON.stringify({ type: 'error', message: 'Failed to execute change default config.', errorCode: 1 }));
         }
       } else if (message === 'closeHMP') {
-        const response = await closeHMP(ws.clientHMP);
+        const response = await closeHMP(ws.clientHMP, parsedData.IP);
         if (response.message == '\x1B[X') {
           ws.send(JSON.stringify({ type: 'success', message: 'HMP connection closed.', errorCode: 0 }));
         } else {
