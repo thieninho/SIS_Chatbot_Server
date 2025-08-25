@@ -54,8 +54,9 @@ async function getAllDevices(ipAddress)
 
   if (responses.length === 0) 
   {
-    console.warn(`No devices found on ${ipAddress}`);
-    return [];
+    console.log(responses);
+    console.log(`No devices found on ${ipAddress}`);
+    return allFoundDevices;
   }
 
   for (const response of responses)

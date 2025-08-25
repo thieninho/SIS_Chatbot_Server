@@ -12,3 +12,5 @@ node_modules/
 # Ignore sensitive information
 .env
 
+!assets/M120.key
+/assets/
