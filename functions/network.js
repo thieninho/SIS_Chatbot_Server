@@ -26,30 +26,18 @@ async function getAllDevices(ipAddress)
   const payload_string = 'DLA_DISCOVERY;v1.0;FIND_REQ;AnswerPort=4089;Version=2.0';
   let responses = [];
   
-  // Validate IP address
-  const validIPs = getIPv4Addresses();
-  if (!validIPs.includes(ipAddress)) {
-    console.error(`Invalid IP address: ${ipAddress}. Valid IPs: ${validIPs.join(', ')}`);
+  // // Validate IP address
+  // const validIPs = getIPv4Addresses();
+  // if (!validIPs.includes(ipAddress)) {
+  //   console.error(`Invalid IP address: ${ipAddress}. Valid IPs: ${validIPs.join(', ')}`);
+  //   return [];
+  // }
+
+  try {
+    responses = await sendUdpBroadcastAndListen(ipAddress, payload_string);
+  } catch (error) {
+    console.error(`Error during UDP broadcast on ${ipAddress}: ${error.message}`);
     return [];
-  }
-
-  const maxRetries = 3;
-  let attempt = 1;
-
-  while (attempt <= maxRetries) {
-    try {
-      responses = await sendUdpBroadcastAndListen(ipAddress, payload_string);
-      break; // Success, exit retry loop
-    } catch (error) {
-      if (error.code === 'EADDRINUSE' && attempt < maxRetries) {
-        console.warn(`Port 4089 in use on ${ipAddress}, retrying (${attempt}/${maxRetries})...`);
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-        attempt++;
-      } else {
-        console.error(`Error during UDP broadcast on ${ipAddress}: ${error.message}`);
-        return [];
-      }
-    }
   }
 
   if (responses.length === 0) 

@@ -150,6 +150,11 @@ async function uploadZipFileToFolder(sftp, localZip, remoteFolder) {
 }
 
 async function changeConfig(ws, data) {
+  if(data.config.name == 'undefined')
+  {
+    data.config.name = 'myDefault';
+    ws.send(JSON.stringify({ type: 'warning', message: 'No config name provided, using "myDefault".', errorCode: 0 }));
+  }
   if (!ws.clientHMP) {
     ws.send(JSON.stringify({ type: 'warning', message: 'No HMP client available. Please wait until the connection is established.', errorCode: 0 }));
     const response = await openHMP(parsedData.IP, ['C', 'B']);

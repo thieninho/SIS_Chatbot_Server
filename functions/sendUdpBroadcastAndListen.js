@@ -7,7 +7,7 @@ function sendUdpBroadcastAndListen(sourceIp, payload_string, options = {})
   const DEST_PORT = options.destPort || 4088;
   const PAYLOAD = options.payload || payload_string;
   const LISTEN_TIMEOUT = options.listenTimeout || 5000; // ms
-  const MAX_RESPONSES = options.maxResponses || 10;
+  const MAX_RESPONSES = options.maxResponses || 1000;
 
   return new Promise((resolve, reject) => 
   {

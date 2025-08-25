@@ -3,7 +3,7 @@ const getAllDevices = require('./network.js').getAllDevices;
 
 function discover() {
   return new Promise((resolve, reject) => {
-    const allIPAddresses = getIPv4Addresses();
+    let allIPAddresses = getIPv4Addresses();
     if (allIPAddresses.length > 0) {
       const devicePromises = allIPAddresses.map(ipAddress =>
         getAllDevices(ipAddress)
