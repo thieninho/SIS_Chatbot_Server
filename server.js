@@ -106,4 +106,4 @@ wss.on('connection', ws => {
   });
 });
 
-console.log('WebSocket server is running on ws://localhost:3000');
+console.log('WebSocket server is running on ws://10.84.30.91:3000');
