@@ -5,7 +5,8 @@ const changeIP = require('./functions/changeIP');
 const { openHMP, closeHMP, commandHMP } = require('./functions/HMP.js');
 const { changeConfig } = require('./functions/changeConfig.js');
 
-const wss = new WebSocket.Server({ port: 3000 });
+const PORT = process.env.PORT || 3000;
+const wss = new WebSocket.Server({ port: PORT });
 
 wss.on('error', (err) => {
   console.error('WebSocket server error:', err.message);
